@@ -42,12 +42,8 @@ try:
     # Execute the GoAccess command to generate a new HTML file
     stdin, stdout, stderr = ssh.exec_command(goaccess_command)
     goaccess_stdout = stdout.read().decode().strip()
-    goaccess_err = stderr.read().decode().strip()
-    if goaccess_err:
-        print(f"Error executing GoAccess command: {goaccess_err}")
-    else:
-        print("GoAccess command executed successfully.")
-        print(f"GoAccess output: {goaccess_stdout}")
+    print("GoAccess command executed successfully.")
+    print(f"GoAccess output: {goaccess_stdout}")
 
     # Download the generated HTML file
     try:
