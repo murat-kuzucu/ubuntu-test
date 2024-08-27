@@ -24,8 +24,8 @@ output_file = "/tmp/nginx_report.html"
 goaccess_command = f"goaccess {log_file} -o {output_file} --log-format=COMBINED"
 delete_command = f"rm -f {output_file}"
 
-# Connect to the server and run the commands
 try:
+    # Connect to the server
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(hostname=credentials["host"], username=credentials["username"], password=credentials["password"])
@@ -33,34 +33,40 @@ try:
 
     # Delete the existing HTML file if it exists
     stdin, stdout, stderr = ssh.exec_command(delete_command)
-    delete_err = stderr.read().decode()
+    delete_err = stderr.read().decode().strip()
     if delete_err:
-        print("Error deleting existing file:", delete_err)
+        print(f"Error deleting existing file: {delete_err}")
     else:
         print("Existing HTML file deleted (if any).")
 
     # Execute the GoAccess command to generate a new HTML file
     stdin, stdout, stderr = ssh.exec_command(goaccess_command)
-    goaccess_stdout = stdout.read().decode()
-    goaccess_err = stderr.read().decode()
+    goaccess_stdout = stdout.read().decode().strip()
+    goaccess_err = stderr.read().decode().strip()
     if goaccess_err:
-        print("Error executing GoAccess command:", goaccess_err)
+        print(f"Error executing GoAccess command: {goaccess_err}")
     else:
         print("GoAccess command executed successfully.")
-        print("GoAccess output:", goaccess_stdout)
+        print(f"GoAccess output: {goaccess_stdout}")
 
     # Download the generated HTML file
-    sftp = ssh.open_sftp()
-    sftp.get(output_file, os.path.basename(output_file))
-    sftp.close()
-    print("HTML file successfully downloaded.")
+    try:
+        sftp = ssh.open_sftp()
+        sftp.get(output_file, os.path.basename(output_file))
+        print("HTML file successfully downloaded.")
+    except FileNotFoundError as fnf_error:
+        print(f"File not found on the server: {output_file}")
+    except Exception as e:
+        print(f"Error during SFTP operation: {e}")
+    finally:
+        if 'sftp' in locals():
+            sftp.close()
 
 except paramiko.SSHException as e:
     print(f"SSH error: {e}")
-    exit(1)
-except FileNotFoundError:
-    print(f"File not found: {output_file}")
-    exit(1)
+except Exception as e:
+    print(f"An unexpected error occurred: {e}")
 finally:
-    ssh.close()
-    print("SSH session closed.")
+    if 'ssh' in locals():
+        ssh.close()
+        print("SSH session closed.")
